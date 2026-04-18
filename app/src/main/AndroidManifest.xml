@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyCar">
         <activity
+            android:name=".ui.dashboard.DashboardActivity"
+            android:exported="false"
+            android:label="@string/title_activity_dashboard"
+            android:theme="@style/Theme.MyCar" />
+        <activity
             android:name=".ui.auth.RegisterActivity"
             android:exported="false"
             android:label="@string/title_activity_register"

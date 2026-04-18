@@ -57,8 +57,13 @@ class LoginActivity : ComponentActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Login reușit!", Toast.LENGTH_SHORT).show()
-                    // TODO: DashboardActivity
-                } else {
+
+                    startActivity(
+                        Intent(this, com.example.mycar.ui.dashboard.DashboardActivity::class.java)
+                    )
+                    finish()
+                }
+                else {
                     Toast.makeText(
                         this,
                         "Eroare: ${task.exception?.message}",
