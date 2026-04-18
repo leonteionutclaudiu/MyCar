@@ -1,5 +1,6 @@
 package com.example.mycar.ui.dashboard
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.mycar.ui.car.AddCarActivity
 import com.example.mycar.ui.theme.MyCarTheme
 
 class DashboardActivity : ComponentActivity() {
@@ -30,6 +33,7 @@ class DashboardActivity : ComponentActivity() {
 
 @Composable
 fun DashboardScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -44,5 +48,14 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Bine ai venit în aplicație!")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            val intent = Intent(context, AddCarActivity::class.java)
+            context.startActivity(intent)
+        }) {
+            Text("Adaugă mașină")
+        }
     }
 }
