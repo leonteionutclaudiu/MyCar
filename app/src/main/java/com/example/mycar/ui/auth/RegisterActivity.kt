@@ -1,6 +1,5 @@
 package com.example.mycar.ui.auth
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -20,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.example.mycar.ui.theme.MyCarTheme
 import com.google.firebase.auth.FirebaseAuth
 
-class LoginActivity : ComponentActivity() {
+class RegisterActivity : ComponentActivity() {
 
     private lateinit var auth: FirebaseAuth
 
@@ -33,13 +32,10 @@ class LoginActivity : ComponentActivity() {
         setContent {
             MyCarTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    LoginScreen(
+                    RegisterScreen(
                         modifier = Modifier.padding(innerPadding),
-                        onLoginClick = { email, password ->
-                            loginUser(email, password)
-                        },
-                        onRegisterClick = {
-                            startActivity(Intent(this, RegisterActivity::class.java))
+                        onRegisterClick = { email, password ->
+                            registerUser(email, password)
                         }
                     )
                 }
@@ -47,17 +43,25 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
-    private fun loginUser(email: String, password: String) {
-        if (email.isEmpty() || password.isEmpty()) {
+    private fun registerUser(email: String, password: String) {
+        val trimmedEmail = email.trim()
+        val trimmedPassword = password.trim()
+
+        if (trimmedEmail.isEmpty() || trimmedPassword.isEmpty()) {
             Toast.makeText(this, "Completează toate câmpurile!", Toast.LENGTH_SHORT).show()
             return
         }
 
-        auth.signInWithEmailAndPassword(email.trim(), password.trim())
+        if (trimmedPassword.length < 6) {
+            Toast.makeText(this, "Parola minim 6 caractere!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        auth.createUserWithEmailAndPassword(trimmedEmail, trimmedPassword)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Toast.makeText(this, "Login reușit!", Toast.LENGTH_SHORT).show()
-                    // TODO: DashboardActivity
+                    Toast.makeText(this, "Cont creat!", Toast.LENGTH_SHORT).show()
+                    finish() // te întoarce la login
                 } else {
                     Toast.makeText(
                         this,
@@ -70,10 +74,9 @@ class LoginActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     modifier: Modifier = Modifier,
-    onLoginClick: (String, String) -> Unit,
-    onRegisterClick: () -> Unit
+    onRegisterClick: (String, String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -87,7 +90,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
 
-        Text("MyCar Login", style = MaterialTheme.typography.headlineMedium)
+        Text("Register", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -123,16 +126,10 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { onLoginClick(email, password) },
+            onClick = { onRegisterClick(email, password) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Login")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(onClick = onRegisterClick) {
-            Text("Nu ai cont? Înregistrează-te")
+            Text("Creează cont")
         }
     }
 }

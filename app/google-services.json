@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "850610871239",
+    "project_id": "mycar-c5174",
+    "storage_bucket": "mycar-c5174.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850610871239:android:ff310dce6cb189d53657e2",
+        "android_client_info": {
+          "package_name": "com.example.mycar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcuuEa4rywq3Yp_OQf3AK-d0UqmAlhMOE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
