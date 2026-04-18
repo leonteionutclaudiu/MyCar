@@ -1,4 +1,4 @@
-package com.example.mycar
+package com.example.mycar.ui.auth
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
