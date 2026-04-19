@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.mycar.ui.car.AddCarActivity
+import com.example.mycar.ui.car.CarListActivity
 import com.example.mycar.ui.theme.MyCarTheme
 
 class DashboardActivity : ComponentActivity() {
@@ -56,6 +57,13 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
             context.startActivity(intent)
         }) {
             Text("Adaugă mașină")
+        }
+
+        Button(onClick = {
+            val intent = Intent(context, CarListActivity::class.java)
+            context.startActivity(intent)
+        }) {
+            Text("Vezi mașinile")
         }
     }
 }

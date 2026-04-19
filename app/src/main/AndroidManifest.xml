@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyCar">
         <activity
+            android:name=".ui.car.CarListActivity"
+            android:exported="false"
+            android:label="@string/title_activity_car_list"
+            android:theme="@style/Theme.MyCar" />
+        <activity
             android:name=".ui.car.AddCarActivity"
             android:exported="false"
             android:label="@string/title_activity_add_car"

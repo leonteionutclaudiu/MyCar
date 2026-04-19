@@ -8,13 +8,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.mycar.data.model.Car
 import com.example.mycar.ui.theme.MyCarTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.Calendar
 
 class AddCarActivity : ComponentActivity() {
 
@@ -25,14 +26,30 @@ class AddCarActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val carId = intent.getStringExtra("carId")
+        val isEditMode = carId != null
+
+        val brand = intent.getStringExtra("brand") ?: ""
+        val model = intent.getStringExtra("model") ?: ""
+        val year = intent.getStringExtra("year") ?: ""
+        val fuel = intent.getStringExtra("fuelType") ?: ""
+        val hp = intent.getStringExtra("horsepower") ?: ""
+        val plate = intent.getStringExtra("licensePlate") ?: ""
+
         setContent {
             MyCarTheme {
-                Scaffold { padding ->
-                    AddCarScreen(Modifier.padding(padding)) {
-                            brand, model, year, fuelType, horsepower, licensePlate ->
-                        saveCar(brand, model, year, fuelType, horsepower, licensePlate)
+                AddCarScreen(
+                    isEditMode = isEditMode,
+                    initialBrand = brand,
+                    initialModel = model,
+                    initialYear = year,
+                    initialFuel = fuel,
+                    initialHp = hp,
+                    initialPlate = plate,
+                    onSave = { b, m, y, f, h, p ->
+                        saveCar(b, m, y, f, h, p, carId)
                     }
-                }
+                )
             }
         }
     }
@@ -41,83 +58,107 @@ class AddCarActivity : ComponentActivity() {
         brand: String,
         model: String,
         year: String,
-        fuelType: String,
-        horsepower: String,
-        licensePlate: String
+        fuel: String,
+        hp: String,
+        plate: String,
+        carId: String?
     ) {
-        val userId = auth.currentUser?.uid
+        val userId = auth.currentUser?.uid ?: return
+        val formattedPlate = plate.trim().uppercase()
 
-        if (userId == null) {
-            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
-            return
-        }
+        val ref = db.collection("users")
+            .document(userId)
+            .collection("cars")
 
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        // Validare: Verificăm dacă numărul de înmatriculare există deja la altă mașină
+        ref.whereEqualTo("licensePlate", formattedPlate).get()
+            .addOnSuccessListener { documents ->
+                var isDuplicate = false
+                for (document in documents) {
+                    if (carId == null || document.id != carId) {
+                        isDuplicate = true
+                        break
+                    }
+                }
 
-        if (brand.isBlank() || model.isBlank() || year.isBlank()) {
-            Toast.makeText(this, "Completează câmpurile obligatorii!", Toast.LENGTH_SHORT).show()
-            return
-        }
+                if (isDuplicate) {
+                    Toast.makeText(this, "Numărul $formattedPlate este deja înregistrat!", Toast.LENGTH_LONG).show()
+                } else {
+                    performSave(brand, model, year, fuel, hp, formattedPlate, carId, ref)
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Eroare la verificarea numărului", Toast.LENGTH_SHORT).show()
+            }
+    }
 
-        val yearInt = year.toIntOrNull()
-        if (yearInt == null || yearInt < 1900 || yearInt > currentYear) {
-            Toast.makeText(this, "An invalid!", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val hpInt = horsepower.toIntOrNull()
-        if (hpInt == null || hpInt <= 0) {
-            Toast.makeText(this, "Cai putere invalizi!", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (licensePlate.isBlank()) {
-            Toast.makeText(this, "Introdu numărul de înmatriculare!", Toast.LENGTH_SHORT).show()
-            return
+    private fun performSave(
+        brand: String,
+        model: String,
+        year: String,
+        fuel: String,
+        hp: String,
+        plate: String,
+        carId: String?,
+        ref: com.google.firebase.firestore.CollectionReference
+    ) {
+        val docRef = if (carId != null) {
+            ref.document(carId)
+        } else {
+            ref.document()
         }
 
         val car = Car(
+            id = docRef.id,
             brand = brand,
             model = model,
             year = year,
-            fuelType = fuelType,
-            horsepower = horsepower,
-            licensePlate = licensePlate
+            fuelType = fuel,
+            horsepower = hp,
+            licensePlate = plate
         )
 
-        db.collection("users")
-            .document(userId)
-            .collection("cars")
-            .add(car)
+        docRef.set(car)
             .addOnSuccessListener {
-                Toast.makeText(this, "Mașină adăugată!", Toast.LENGTH_SHORT).show()
+                val message = if (carId != null) "Mașină actualizată" else "Mașină adăugată"
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                 finish()
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Eroare: ${it.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Eroare la salvare", Toast.LENGTH_SHORT).show()
             }
     }
 }
 
 @Composable
 fun AddCarScreen(
-    modifier: Modifier = Modifier,
+    isEditMode: Boolean,
+    initialBrand: String = "",
+    initialModel: String = "",
+    initialYear: String = "",
+    initialFuel: String = "",
+    initialHp: String = "",
+    initialPlate: String = "",
     onSave: (String, String, String, String, String, String) -> Unit
 ) {
-    var brand by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("") }
-    var year by remember { mutableStateOf("") }
-    var fuelType by remember { mutableStateOf("") }
-    var horsepower by remember { mutableStateOf("") }
-    var licensePlate by remember { mutableStateOf("") }
+    var brand by remember { mutableStateOf(initialBrand) }
+    var model by remember { mutableStateOf(initialModel) }
+    var year by remember { mutableStateOf(initialYear) }
+    var fuelType by remember { mutableStateOf(initialFuel) }
+    var horsepower by remember { mutableStateOf(initialHp) }
+    var plate by remember { mutableStateOf(initialPlate) }
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .statusBarsPadding()
     ) {
 
-        Text("Adaugă mașină", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = if (isEditMode) "Editează mașină" else "Adaugă mașină",
+            style = MaterialTheme.typography.headlineMedium
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -127,18 +168,12 @@ fun AddCarScreen(
             label = { Text("Brand") },
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         OutlinedTextField(
             value = model,
             onValueChange = { model = it },
             label = { Text("Model") },
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         OutlinedTextField(
             value = year,
             onValueChange = { year = it },
@@ -148,28 +183,21 @@ fun AddCarScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = fuelType,
-            onValueChange = { fuelType = it },
-            label = { Text("Fuel Type (ex: Benzină)") },
-            modifier = Modifier.fillMaxWidth()
+        FuelDropdown(
+            selected = fuelType,
+            onSelected = { fuelType = it }
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = horsepower,
             onValueChange = { horsepower = it },
-            label = { Text("Cai putere") },
+            label = { Text("HP") },
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         OutlinedTextField(
-            value = licensePlate,
-            onValueChange = { licensePlate = it },
-            label = { Text("Număr înmatriculare") },
+            value = plate,
+            onValueChange = { plate = it },
+            label = { Text("Număr") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -177,18 +205,59 @@ fun AddCarScreen(
 
         Button(
             onClick = {
-                onSave(
-                    brand,
-                    model,
-                    year,
-                    fuelType,
-                    horsepower,
-                    licensePlate
-                )
+                if (brand.isBlank() || model.isBlank() || plate.isBlank()) return@Button
+                onSave(brand, model, year, fuelType, horsepower, plate)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Salvează")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FuelDropdown(
+    selected: String,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val options = listOf("Benzină", "Diesel", "Electric", "Hybrid", "GPL")
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Combustibil") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+            },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            options.forEach { fuel ->
+                DropdownMenuItem(
+                    text = { Text(fuel) },
+                    onClick = {
+                        onSelected(fuel)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

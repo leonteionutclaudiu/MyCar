@@ -3,4 +3,5 @@
     <string name="title_activity_register">RegisterActivity</string>
     <string name="title_activity_dashboard">DashboardActivity</string>
     <string name="title_activity_add_car">AddCarActivity</string>
+    <string name="title_activity_car_list">CarListActivity</string>
 </resources>
