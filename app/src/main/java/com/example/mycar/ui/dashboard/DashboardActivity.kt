@@ -12,9 +12,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.mycar.ui.auth.LoginActivity
 import com.example.mycar.ui.car.AddCarActivity
 import com.example.mycar.ui.car.CarListActivity
 import com.example.mycar.ui.theme.MyCarTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class DashboardActivity : ComponentActivity() {
 
@@ -25,15 +27,28 @@ class DashboardActivity : ComponentActivity() {
         setContent {
             MyCarTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DashboardScreen(Modifier.padding(innerPadding))
+                    DashboardScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        onLogout = {
+                            logout()
+                        }
+                    )
                 }
             }
         }
     }
+
+    private fun logout() {
+        FirebaseAuth.getInstance().signOut()
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
 }
 
 @Composable
-fun DashboardScreen(modifier: Modifier = Modifier) {
+fun DashboardScreen(modifier: Modifier = Modifier, onLogout: () -> Unit) {
     val context = LocalContext.current
     Column(
         modifier = modifier.fillMaxSize(),
@@ -50,20 +65,38 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
 
         Text("Bine ai venit în aplicație!")
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        Button(onClick = {
-            val intent = Intent(context, AddCarActivity::class.java)
-            context.startActivity(intent)
-        }) {
+        Button(
+            onClick = {
+                val intent = Intent(context, AddCarActivity::class.java)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(0.7f)
+        ) {
             Text("Adaugă mașină")
         }
 
-        Button(onClick = {
-            val intent = Intent(context, CarListActivity::class.java)
-            context.startActivity(intent)
-        }) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                val intent = Intent(context, CarListActivity::class.java)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(0.7f)
+        ) {
             Text("Vezi mașinile")
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(0.7f),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Deconectare")
         }
     }
 }
