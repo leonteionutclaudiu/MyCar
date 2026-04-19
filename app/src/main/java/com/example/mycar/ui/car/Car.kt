@@ -7,5 +7,8 @@ data class Car(
     val year: String = "",
     val fuelType: String = "",
     val horsepower: String = "",
-    val licensePlate: String = ""
+    val licensePlate: String = "",
+    val itpExpiry: String = "",
+    val rcaExpiry: String = "",
+    val rovinietaExpiry: String = ""
 )

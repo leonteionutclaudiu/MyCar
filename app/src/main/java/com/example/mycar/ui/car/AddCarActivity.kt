@@ -1,21 +1,23 @@
 package com.example.mycar.ui.car
 
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.mycar.data.model.Car
 import com.example.mycar.ui.theme.MyCarTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.*
 
 class AddCarActivity : ComponentActivity() {
 
@@ -35,6 +37,9 @@ class AddCarActivity : ComponentActivity() {
         val fuel = intent.getStringExtra("fuelType") ?: ""
         val hp = intent.getStringExtra("horsepower") ?: ""
         val plate = intent.getStringExtra("licensePlate") ?: ""
+        val itp = intent.getStringExtra("itpExpiry") ?: ""
+        val rca = intent.getStringExtra("rcaExpiry") ?: ""
+        val rov = intent.getStringExtra("rovinietaExpiry") ?: ""
 
         setContent {
             MyCarTheme {
@@ -46,8 +51,11 @@ class AddCarActivity : ComponentActivity() {
                     initialFuel = fuel,
                     initialHp = hp,
                     initialPlate = plate,
-                    onSave = { b, m, y, f, h, p ->
-                        saveCar(b, m, y, f, h, p, carId)
+                    initialItp = itp,
+                    initialRca = rca,
+                    initialRov = rov,
+                    onSave = { b, m, y, f, h, p, itpE, rcaE, rovE ->
+                        saveCar(b, m, y, f, h, p, itpE, rcaE, rovE, carId)
                     }
                 )
             }
@@ -61,6 +69,9 @@ class AddCarActivity : ComponentActivity() {
         fuel: String,
         hp: String,
         plate: String,
+        itp: String,
+        rca: String,
+        rov: String,
         carId: String?
     ) {
         val userId = auth.currentUser?.uid ?: return
@@ -70,7 +81,6 @@ class AddCarActivity : ComponentActivity() {
             .document(userId)
             .collection("cars")
 
-        // Validare: Verificăm dacă numărul de înmatriculare există deja la altă mașină
         ref.whereEqualTo("licensePlate", formattedPlate).get()
             .addOnSuccessListener { documents ->
                 var isDuplicate = false
@@ -84,11 +94,8 @@ class AddCarActivity : ComponentActivity() {
                 if (isDuplicate) {
                     Toast.makeText(this, "Numărul $formattedPlate este deja înregistrat!", Toast.LENGTH_LONG).show()
                 } else {
-                    performSave(brand, model, year, fuel, hp, formattedPlate, carId, ref)
+                    performSave(brand, model, year, fuel, hp, formattedPlate, itp, rca, rov, carId, ref)
                 }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Eroare la verificarea numărului", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -99,6 +106,9 @@ class AddCarActivity : ComponentActivity() {
         fuel: String,
         hp: String,
         plate: String,
+        itp: String,
+        rca: String,
+        rov: String,
         carId: String?,
         ref: com.google.firebase.firestore.CollectionReference
     ) {
@@ -115,7 +125,10 @@ class AddCarActivity : ComponentActivity() {
             year = year,
             fuelType = fuel,
             horsepower = hp,
-            licensePlate = plate
+            licensePlate = plate,
+            itpExpiry = itp,
+            rcaExpiry = rca,
+            rovinietaExpiry = rov
         )
 
         docRef.set(car)
@@ -123,9 +136,6 @@ class AddCarActivity : ComponentActivity() {
                 val message = if (carId != null) "Mașină actualizată" else "Mașină adăugată"
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                 finish()
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Eroare la salvare", Toast.LENGTH_SHORT).show()
             }
     }
 }
@@ -139,7 +149,10 @@ fun AddCarScreen(
     initialFuel: String = "",
     initialHp: String = "",
     initialPlate: String = "",
-    onSave: (String, String, String, String, String, String) -> Unit
+    initialItp: String = "",
+    initialRca: String = "",
+    initialRov: String = "",
+    onSave: (String, String, String, String, String, String, String, String, String) -> Unit
 ) {
     var brand by remember { mutableStateOf(initialBrand) }
     var model by remember { mutableStateOf(initialModel) }
@@ -147,6 +160,9 @@ fun AddCarScreen(
     var fuelType by remember { mutableStateOf(initialFuel) }
     var horsepower by remember { mutableStateOf(initialHp) }
     var plate by remember { mutableStateOf(initialPlate) }
+    var itpDate by remember { mutableStateOf(initialItp) }
+    var rcaDate by remember { mutableStateOf(initialRca) }
+    var rovinietaDate by remember { mutableStateOf(initialRov) }
 
     Column(
         modifier = Modifier
@@ -154,7 +170,6 @@ fun AddCarScreen(
             .padding(16.dp)
             .statusBarsPadding()
     ) {
-
         Text(
             text = if (isEditMode) "Editează mașină" else "Adaugă mașină",
             style = MaterialTheme.typography.headlineMedium
@@ -162,51 +177,28 @@ fun AddCarScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = brand,
-            onValueChange = { brand = it },
-            label = { Text("Brand") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = model,
-            onValueChange = { model = it },
-            label = { Text("Model") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = year,
-            onValueChange = { year = it },
-            label = { Text("An") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Brand") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("An") }, modifier = Modifier.fillMaxWidth())
 
-        Spacer(modifier = Modifier.height(8.dp))
+        FuelDropdown(selected = fuelType, onSelected = { fuelType = it })
 
-        FuelDropdown(
-            selected = fuelType,
-            onSelected = { fuelType = it }
-        )
-
-        OutlinedTextField(
-            value = horsepower,
-            onValueChange = { horsepower = it },
-            label = { Text("HP") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = plate,
-            onValueChange = { plate = it },
-            label = { Text("Număr") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = horsepower, onValueChange = { horsepower = it }, label = { Text("HP") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = plate, onValueChange = { plate = it }, label = { Text("Număr") }, modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.height(16.dp))
+        Text("Documente (Expirație):", style = MaterialTheme.typography.titleMedium)
+
+        DatePickerField(label = "Expirare ITP", date = itpDate, onDateSelected = { itpDate = it })
+        DatePickerField(label = "Expirare RCA", date = rcaDate, onDateSelected = { rcaDate = it })
+        DatePickerField(label = "Expirare Rovinietă", date = rovinietaDate, onDateSelected = { rovinietaDate = it })
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
                 if (brand.isBlank() || model.isBlank() || plate.isBlank()) return@Button
-                onSave(brand, model, year, fuelType, horsepower, plate)
+                onSave(brand, model, year, fuelType, horsepower, plate, itpDate, rcaDate, rovinietaDate)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -215,14 +207,42 @@ fun AddCarScreen(
     }
 }
 
+@Composable
+fun DatePickerField(label: String, date: String, onDateSelected: (String) -> Unit) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    OutlinedTextField(
+        value = date,
+        onValueChange = {},
+        label = { Text(label) },
+        readOnly = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day ->
+                        onDateSelected("$day/${month + 1}/$year")
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            },
+        enabled = false, // Setăm false pentru a forța click-ul pe modifier
+        colors = OutlinedTextFieldDefaults.colors(
+            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurface,
+            disabledBorderColor = MaterialTheme.colorScheme.outline
+        )
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FuelDropdown(
-    selected: String,
-    onSelected: (String) -> Unit
-) {
+fun FuelDropdown(selected: String, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-
     val options = listOf("Benzină", "Diesel", "Electric", "Hybrid", "GPL")
 
     ExposedDropdownMenuBox(
@@ -230,33 +250,17 @@ fun FuelDropdown(
         onExpandedChange = { expanded = !expanded },
         modifier = Modifier.fillMaxWidth()
     ) {
-
         OutlinedTextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
             label = { Text("Combustibil") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
-            },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { fuel ->
-                DropdownMenuItem(
-                    text = { Text(fuel) },
-                    onClick = {
-                        onSelected(fuel)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem(text = { Text(fuel) }, onClick = { onSelected(fuel); expanded = false })
             }
         }
     }

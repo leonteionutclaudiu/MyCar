@@ -134,6 +134,9 @@ fun CarListScreen(
                                 putExtra("fuelType", car.fuelType)
                                 putExtra("horsepower", car.horsepower)
                                 putExtra("licensePlate", car.licensePlate)
+                                putExtra("itpExpiry", car.itpExpiry)
+                                putExtra("rcaExpiry", car.rcaExpiry)
+                                putExtra("rovinietaExpiry", car.rovinietaExpiry)
                             }
                             context.startActivity(intent)
                         }
@@ -157,7 +160,7 @@ fun CarItem(
         confirmValueChange = {
             if (it == SwipeToDismissBoxValue.EndToStart) {
                 showDialog = true
-                false // NU șterge direct
+                false
             } else {
                 false
             }
@@ -193,17 +196,30 @@ fun CarItem(
                         "${car.brand} ${car.model}",
                         style = MaterialTheme.typography.titleMedium
                     )
+                    Text("Număr: ${car.licensePlate}", style = MaterialTheme.typography.bodyMedium)
 
-                    Text("An: ${car.year}")
-                    Text("Combustibil: ${car.fuelType}")
-                    Text("HP: ${car.horsepower}")
-                    Text("Număr: ${car.licensePlate}")
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+
+                    if (car.itpExpiry.isNotEmpty()) {
+                        Text("📅 ITP: ${car.itpExpiry}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (car.rcaExpiry.isNotEmpty()) {
+                        Text("📅 RCA: ${car.rcaExpiry}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (car.rovinietaExpiry.isNotEmpty()) {
+                        Text("📅 Rovinietă: ${car.rovinietaExpiry}", style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    if (car.itpExpiry.isEmpty() && car.rcaExpiry.isEmpty() && car.rovinietaExpiry.isEmpty()) {
+                        Text("Status documente: Nesetat. Apasă pentru a adăuga.",
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f))
+                    }
                 }
             }
         }
     )
 
-    // 🔥 Confirm dialog
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
