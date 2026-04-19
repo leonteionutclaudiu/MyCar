@@ -28,6 +28,13 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         auth = FirebaseAuth.getInstance()
+
+        // Verificăm dacă utilizatorul este deja logat
+        if (auth.currentUser != null) {
+            goToDashboard()
+            return
+        }
+
         enableEdgeToEdge()
 
         setContent {
@@ -57,11 +64,7 @@ class LoginActivity : ComponentActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Login reușit!", Toast.LENGTH_SHORT).show()
-
-                    startActivity(
-                        Intent(this, com.example.mycar.ui.dashboard.DashboardActivity::class.java)
-                    )
-                    finish()
+                    goToDashboard()
                 }
                 else {
                     Toast.makeText(
@@ -71,6 +74,13 @@ class LoginActivity : ComponentActivity() {
                     ).show()
                 }
             }
+    }
+
+    private fun goToDashboard() {
+        startActivity(
+            Intent(this, com.example.mycar.ui.dashboard.DashboardActivity::class.java)
+        )
+        finish()
     }
 }
 
