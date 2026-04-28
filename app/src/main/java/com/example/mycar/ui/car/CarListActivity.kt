@@ -157,6 +157,7 @@ fun CarItem(
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
+    val context = LocalContext.current
 
     // Funcție helper pentru a calcula culoarea în funcție de dată
     fun getExpiryColor(dateString: String): Color {
@@ -252,6 +253,22 @@ fun CarItem(
                         Text("Status documente: Nesetat. Apasă pentru a adăuga.",
                             style = MaterialTheme.typography.bodySmall, 
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f))
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, MaintenanceListActivity::class.java).apply {
+                                putExtra("carId", car.id)
+                                putExtra("carName", "${car.brand} ${car.model}")
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Vezi Istoric Service")
                     }
                 }
             }

@@ -14,6 +14,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyCar">
         <activity
+            android:name=".ui.car.MaintenanceListActivity"
+            android:exported="false"
+            android:label="Istoric Service"
+            android:theme="@style/Theme.MyCar" />
+        <activity
+            android:name=".ui.car.AddMaintenanceActivity"
+            android:exported="false"
+            android:label="Adaugă Intervenție"
+            android:theme="@style/Theme.MyCar" />
+        <activity
             android:name=".ui.car.CarListActivity"
             android:exported="false"
             android:label="@string/title_activity_car_list"
