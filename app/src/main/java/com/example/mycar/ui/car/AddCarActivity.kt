@@ -164,6 +164,10 @@ fun AddCarScreen(
     var rcaDate by remember { mutableStateOf(initialRca) }
     var rovinietaDate by remember { mutableStateOf(initialRov) }
 
+    val isPlateValid = remember(plate) {
+        plate.matches("^[A-Z]{1,2} [0-9]{2,3} [A-Z]{3}$".toRegex())
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -184,7 +188,23 @@ fun AddCarScreen(
         FuelDropdown(selected = fuelType, onSelected = { fuelType = it })
 
         OutlinedTextField(value = horsepower, onValueChange = { horsepower = it }, label = { Text("HP") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = plate, onValueChange = { plate = it }, label = { Text("Număr") }, modifier = Modifier.fillMaxWidth())
+        
+        OutlinedTextField(
+            value = plate,
+            onValueChange = { 
+                // Formatare automată: litere mari și gestionare spații
+                plate = it.uppercase().replace("\\s+".toRegex(), " ")
+            }, 
+            label = { Text("Număr de înmatriculare") }, 
+            placeholder = { Text("ex: B 123 ABC sau CT 12 ABC") },
+            isError = plate.isNotEmpty() && !isPlateValid,
+            supportingText = {
+                if (plate.isNotEmpty() && !isPlateValid) {
+                    Text("Format: JUDEȚ NUMĂR LITERE (ex: B 123 ABC)", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
         Text("Documente (Expirație):", style = MaterialTheme.typography.titleMedium)
@@ -197,10 +217,11 @@ fun AddCarScreen(
 
         Button(
             onClick = {
-                if (brand.isBlank() || model.isBlank() || plate.isBlank()) return@Button
+                if (brand.isBlank() || model.isBlank() || plate.isBlank() || !isPlateValid) return@Button
                 onSave(brand, model, year, fuelType, horsepower, plate, itpDate, rcaDate, rovinietaDate)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = brand.isNotBlank() && model.isNotBlank() && isPlateValid
         ) {
             Text("Salvează")
         }

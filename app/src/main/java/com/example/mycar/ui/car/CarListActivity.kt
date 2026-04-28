@@ -23,6 +23,9 @@ import com.example.mycar.ui.theme.MyCarTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 class CarListActivity : ComponentActivity() {
 
@@ -154,6 +157,29 @@ fun CarItem(
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
+
+    // Funcție helper pentru a calcula culoarea în funcție de dată
+    fun getExpiryColor(dateString: String): Color {
+        if (dateString.isEmpty()) return Color.Unspecified
+        return try {
+            val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
+            val expiryDate = sdf.parse(dateString) ?: return Color.Unspecified
+            val today = Calendar.getInstance().time
+
+            val diffInMillies = expiryDate.time - today.time
+            val diffInDays = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS)
+
+            when {
+                diffInDays < 0 -> Color.Red // Expirat
+                diffInDays <= 15 -> Color.Red // Critic (sub 15 zile)
+                diffInDays <= 30 -> Color(0xFFFFA500) // Atenție (Portocaliu - sub 30 zile)
+                else -> Color(0xFF2E7D32) // Ok (Verde închis)
+            }
+        } catch (e: Exception) {
+            Color.Unspecified
+        }
+    }
+    
     var showDialog by remember { mutableStateOf(false) }
 
     val dismissState = rememberSwipeToDismissBoxState(
@@ -201,13 +227,25 @@ fun CarItem(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
                     if (car.itpExpiry.isNotEmpty()) {
-                        Text("📅 ITP: ${car.itpExpiry}", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "📅 ITP: ${car.itpExpiry}", 
+                            style = MaterialTheme.typography.bodySmall,
+                            color = getExpiryColor(car.itpExpiry)
+                        )
                     }
                     if (car.rcaExpiry.isNotEmpty()) {
-                        Text("📅 RCA: ${car.rcaExpiry}", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "📅 RCA: ${car.rcaExpiry}", 
+                            style = MaterialTheme.typography.bodySmall,
+                            color = getExpiryColor(car.rcaExpiry)
+                        )
                     }
                     if (car.rovinietaExpiry.isNotEmpty()) {
-                        Text("📅 Rovinietă: ${car.rovinietaExpiry}", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "📅 Rovinietă: ${car.rovinietaExpiry}", 
+                            style = MaterialTheme.typography.bodySmall,
+                            color = getExpiryColor(car.rovinietaExpiry)
+                        )
                     }
 
                     if (car.itpExpiry.isEmpty() && car.rcaExpiry.isEmpty() && car.rovinietaExpiry.isEmpty()) {
