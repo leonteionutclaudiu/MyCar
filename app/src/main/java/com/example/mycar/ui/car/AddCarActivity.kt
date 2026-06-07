@@ -7,23 +7,50 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.mycar.data.model.Car
 import com.example.mycar.ui.theme.MyCarTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.*
+import java.util.Calendar
 
 class AddCarActivity : ComponentActivity() {
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -31,33 +58,37 @@ class AddCarActivity : ComponentActivity() {
         val carId = intent.getStringExtra("carId")
         val isEditMode = carId != null
 
-        val brand = intent.getStringExtra("brand") ?: ""
-        val model = intent.getStringExtra("model") ?: ""
-        val year = intent.getStringExtra("year") ?: ""
-        val fuel = intent.getStringExtra("fuelType") ?: ""
-        val hp = intent.getStringExtra("horsepower") ?: ""
-        val plate = intent.getStringExtra("licensePlate") ?: ""
-        val itp = intent.getStringExtra("itpExpiry") ?: ""
-        val rca = intent.getStringExtra("rcaExpiry") ?: ""
-        val rov = intent.getStringExtra("rovinietaExpiry") ?: ""
-
         setContent {
             MyCarTheme {
-                AddCarScreen(
-                    isEditMode = isEditMode,
-                    initialBrand = brand,
-                    initialModel = model,
-                    initialYear = year,
-                    initialFuel = fuel,
-                    initialHp = hp,
-                    initialPlate = plate,
-                    initialItp = itp,
-                    initialRca = rca,
-                    initialRov = rov,
-                    onSave = { b, m, y, f, h, p, itpE, rcaE, rovE ->
-                        saveCar(b, m, y, f, h, p, itpE, rcaE, rovE, carId)
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(if (isEditMode) "Editează mașină" else "Adaugă mașină") },
+                            navigationIcon = {
+                                IconButton(onClick = { finish() }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            }
+                        )
                     }
-                )
+                ) { padding ->
+                    AddCarScreen(
+                        modifier = Modifier.padding(padding),
+                        isEditMode = isEditMode,
+                        initialBrand = intent.getStringExtra("brand") ?: "",
+                        initialModel = intent.getStringExtra("model") ?: "",
+                        initialYear = intent.getStringExtra("year") ?: "",
+                        initialFuel = intent.getStringExtra("fuelType") ?: "",
+                        initialHp = intent.getStringExtra("horsepower") ?: "",
+                        initialPlate = intent.getStringExtra("licensePlate") ?: "",
+                        initialItp = intent.getStringExtra("itpExpiry") ?: "",
+                        initialRca = intent.getStringExtra("rcaExpiry") ?: "",
+                        initialRov = intent.getStringExtra("rovinietaExpiry") ?: "",
+                        onSave = { brand, model, year, fuel, hp, plate, itp, rca, rov ->
+                            saveCar(brand, model, year, fuel, hp, plate, itp, rca, rov, carId)
+                        }
+                    )
+                }
             }
         }
     }
@@ -74,21 +105,21 @@ class AddCarActivity : ComponentActivity() {
         rov: String,
         carId: String?
     ) {
-        val userId = auth.currentUser?.uid ?: return
-        val formattedPlate = plate.trim().uppercase()
+        val userId = auth.currentUser?.uid
+        if (userId == null) {
+            Toast.makeText(this, "Trebuie să fii autentificat pentru a salva mașina.", Toast.LENGTH_LONG).show()
+            return
+        }
 
+        val formattedPlate = plate.trim().uppercase()
         val ref = db.collection("users")
             .document(userId)
             .collection("cars")
 
         ref.whereEqualTo("licensePlate", formattedPlate).get()
             .addOnSuccessListener { documents ->
-                var isDuplicate = false
-                for (document in documents) {
-                    if (carId == null || document.id != carId) {
-                        isDuplicate = true
-                        break
-                    }
+                val isDuplicate = documents.any { document ->
+                    carId == null || document.id != carId
                 }
 
                 if (isDuplicate) {
@@ -96,6 +127,9 @@ class AddCarActivity : ComponentActivity() {
                 } else {
                     performSave(brand, model, year, fuel, hp, formattedPlate, itp, rca, rov, carId, ref)
                 }
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(this, "Nu pot verifica mașina: ${exception.message}", Toast.LENGTH_LONG).show()
             }
     }
 
@@ -110,14 +144,9 @@ class AddCarActivity : ComponentActivity() {
         rca: String,
         rov: String,
         carId: String?,
-        ref: com.google.firebase.firestore.CollectionReference
+        ref: CollectionReference
     ) {
-        val docRef = if (carId != null) {
-            ref.document(carId)
-        } else {
-            ref.document()
-        }
-
+        val docRef = if (carId != null) ref.document(carId) else ref.document()
         val car = Car(
             id = docRef.id,
             brand = brand,
@@ -137,11 +166,15 @@ class AddCarActivity : ComponentActivity() {
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                 finish()
             }
+            .addOnFailureListener { exception ->
+                Toast.makeText(this, "Nu am putut salva mașina: ${exception.message}", Toast.LENGTH_LONG).show()
+            }
     }
 }
 
 @Composable
 fun AddCarScreen(
+    modifier: Modifier = Modifier,
     isEditMode: Boolean,
     initialBrand: String = "",
     initialModel: String = "",
@@ -169,49 +202,49 @@ fun AddCarScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
-            .statusBarsPadding()
     ) {
         Text(
-            text = if (isEditMode) "Editează mașină" else "Adaugă mașină",
-            style = MaterialTheme.typography.headlineMedium
+            text = if (isEditMode) "Actualizează datele mașinii" else "Completează datele mașinii",
+            style = MaterialTheme.typography.titleLarge
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Brand") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("An") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Brand") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = year, onValueChange = { year = it.filter(Char::isDigit) }, label = { Text("An") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
 
         FuelDropdown(selected = fuelType, onSelected = { fuelType = it })
 
-        OutlinedTextField(value = horsepower, onValueChange = { horsepower = it }, label = { Text("HP") }, modifier = Modifier.fillMaxWidth())
-        
+        OutlinedTextField(value = horsepower, onValueChange = { horsepower = it.filter(Char::isDigit) }, label = { Text("CP") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+
         OutlinedTextField(
             value = plate,
-            onValueChange = { 
-                // Formatare automată: litere mari și gestionare spații
+            onValueChange = {
                 plate = it.uppercase().replace("\\s+".toRegex(), " ")
-            }, 
-            label = { Text("Număr de înmatriculare") }, 
+            },
+            label = { Text("Număr de înmatriculare") },
             placeholder = { Text("ex: B 123 ABC sau CT 12 ABC") },
             isError = plate.isNotEmpty() && !isPlateValid,
             supportingText = {
                 if (plate.isNotEmpty() && !isPlateValid) {
-                    Text("Format: JUDEȚ NUMĂR LITERE (ex: B 123 ABC)", color = MaterialTheme.colorScheme.error)
+                    Text("Format: județ număr litere (ex: B 123 ABC)", color = MaterialTheme.colorScheme.error)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Documente (Expirație):", style = MaterialTheme.typography.titleMedium)
+        Text("Documente - date de expirare", style = MaterialTheme.typography.titleMedium)
 
         DatePickerField(label = "Expirare ITP", date = itpDate, onDateSelected = { itpDate = it })
         DatePickerField(label = "Expirare RCA", date = rcaDate, onDateSelected = { rcaDate = it })
-        DatePickerField(label = "Expirare Rovinietă", date = rovinietaDate, onDateSelected = { rovinietaDate = it })
+        DatePickerField(label = "Expirare rovinietă", date = rovinietaDate, onDateSelected = { rovinietaDate = it })
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -243,19 +276,15 @@ fun DatePickerField(label: String, date: String, onDateSelected: (String) -> Uni
             .clickable {
                 DatePickerDialog(
                     context,
-                    { _, year, month, day ->
-                        onDateSelected("$day/${month + 1}/$year")
-                    },
+                    { _, year, month, day -> onDateSelected("$day/${month + 1}/$year") },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
                     calendar.get(Calendar.DAY_OF_MONTH)
                 ).show()
             },
-        enabled = false, // Setăm false pentru a forța click-ul pe modifier
         colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outline
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }
@@ -277,11 +306,19 @@ fun FuelDropdown(selected: String, onSelected: (String) -> Unit) {
             readOnly = true,
             label = { Text("Combustibil") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { fuel ->
-                DropdownMenuItem(text = { Text(fuel) }, onClick = { onSelected(fuel); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(fuel) },
+                    onClick = {
+                        onSelected(fuel)
+                        expanded = false
+                    }
+                )
             }
         }
     }

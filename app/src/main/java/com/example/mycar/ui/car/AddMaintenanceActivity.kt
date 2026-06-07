@@ -87,7 +87,6 @@ fun AddMaintenanceScreen(
     var description by remember { mutableStateOf("") }
     var cost by remember { mutableStateOf("") }
 
-    // Helper pentru a curăța zerourile de la început (ex: "0123" -> "123")
     fun formatInput(input: String): String {
         if (input.startsWith("0") && input.length > 1 && !input.startsWith("0.")) {
             val processed = input.dropWhile { it == '0' }
@@ -96,7 +95,6 @@ fun AddMaintenanceScreen(
         return input
     }
 
-    // Validări stricte
     val isMileageValid = mileage.isNotEmpty() && (mileage.toLongOrNull() ?: 0L) > 0
     val isCostValid = cost.isNotEmpty() && (cost.toDoubleOrNull() ?: 0.0) > 0.0 && cost.matches(Regex("^\\d+(\\.\\d{1,2})?$"))
     val isDescriptionValid = description.trim().length >= 3

@@ -78,7 +78,6 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Creăm un Intent care să deschidă CarListActivity când utilizatorul apasă pe notificare
         val intent = Intent(applicationContext, CarListActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -95,7 +94,7 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent) // Adăugăm intent-ul aici
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
