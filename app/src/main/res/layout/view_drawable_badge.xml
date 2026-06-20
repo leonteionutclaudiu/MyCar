@@ -7,7 +7,7 @@
     <TextView
         android:id="@+id/drawableHeader"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
         android:background="@drawable/mycar_gradient_background"
         android:gravity="center"
         android:minHeight="52dp"
